@@ -1,6 +1,6 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; 
 
 void main() {
   runApp(MyApp());
@@ -59,12 +59,12 @@ class _TodoListState extends State<TodoList> {
   Widget buildTodoCard(Todo todo) {
     return Card(
       key: Key('${todo.title}'),
-      color: todo.isCompleted ? Colors.green : const Color(0xFF756AB6),
+      color: todo.isCompleted ? Color(0xFF7FC7D9) : const Color(0xFF647D87),
       child: ListTile(
         title: Text(
           todo.title,
           style: TextStyle(
-            color: todo.isCompleted ? Colors.grey : Colors.white,
+            color: todo.isCompleted ? Colors.white : Colors.white,
             decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
           ),
         ),
@@ -83,8 +83,28 @@ class _TodoListState extends State<TodoList> {
                 '- $activity',
                 style: TextStyle(
                   color: Colors.white,
-                  decoration: todo.isCompleted ? TextDecoration.lineThrough : null,
+                  decoration:
+                      todo.isCompleted ? TextDecoration.lineThrough : null,
                 ),
+              ),
+            if (todo.deadline != null)
+              Row(
+                children: [
+                  Text(
+                    'Tenggat Waktu: ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight
+                          .bold, 
+                    ),
+                  ),
+                  Text(
+                    DateFormat('dd-MM-yyyy').format(todo.deadline!),
+                    style: TextStyle(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
           ],
         ),
@@ -123,11 +143,14 @@ class _TodoListState extends State<TodoList> {
     TextEditingController titleController = TextEditingController();
     TextEditingController activityController = TextEditingController();
     List<String> activities = [];
+    DateTime selectedDate =
+        DateTime.now(); 
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return buildAddDialog(titleController, activityController, activities);
+        return buildAddDialog(
+            titleController, activityController, activities, selectedDate);
       },
     );
   }
@@ -136,29 +159,55 @@ class _TodoListState extends State<TodoList> {
     TextEditingController titleController,
     TextEditingController activityController,
     List<String> activities,
+    DateTime selectedDate,
   ) {
     return AlertDialog(
       title: Text('Tambah TODO'),
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: titleController,
-            decoration: InputDecoration(labelText: 'Judul Tugas'),
-          ),
-          TextField(
-            controller: activityController,
-            decoration: InputDecoration(labelText: 'Isi Tugas'),
-            keyboardType: TextInputType.multiline,
-            maxLines: null,
-            onChanged: (value) {
-              setState(() {
-                activities = value.split('\n').where((element) => element.isNotEmpty).toList();
-              });
-            },
-          ),
-          for (String activity in activities) Text('- $activity'),
-        ],
+      contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      content: SizedBox(
+        height: MediaQuery.of(context).size.height *
+            0.6, 
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: 'Judul Tugas'),
+            ),
+            TextField(
+              controller: activityController,
+              decoration: InputDecoration(labelText: 'Isi Tugas'),
+              keyboardType: TextInputType.multiline,
+              maxLines: null,
+              onChanged: (value) {
+                setState(() {
+                  activities = value
+                      .split('\n')
+                      .where((element) => element.isNotEmpty)
+                      .toList();
+                });
+              },
+            ),
+            ListTile(
+              title: Text('Tenggat Waktu'),
+              subtitle: Text(DateFormat('dd-MM-yyyy').format(selectedDate)),
+              onTap: () async {
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime(2101),
+                );
+                if (pickedDate != null && pickedDate != selectedDate) {
+                  setState(() {
+                    selectedDate = pickedDate;
+                  });
+                }
+              },
+            ),
+            for (String activity in activities) Text('- $activity'),
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -175,6 +224,7 @@ class _TodoListState extends State<TodoList> {
                   Todo(
                     title: titleController.text,
                     activities: List.from(activities),
+                    deadline: selectedDate,
                   ),
                 );
               });
@@ -207,31 +257,22 @@ class _TodoListState extends State<TodoList> {
     TextEditingController activityController,
   ) {
     return AlertDialog(
-      content: Stack(
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 3, sigmaY: 1),
-            child: Container(
-              color: Colors.transparent,
-            ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text('Edit TODO'),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Text('Edit TODO'),
-              ),
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(labelText: 'Judul Tugas'),
-              ),
-              TextField(
-                controller: activityController,
-                decoration: InputDecoration(labelText: 'Isi Tugas (pisahkan dengan baris)'),
-                maxLines: null,
-              ),
-            ],
+          TextField(
+            controller: titleController,
+            decoration: InputDecoration(labelText: 'Judul Tugas'),
+          ),
+          TextField(
+            controller: activityController,
+            decoration:
+                InputDecoration(labelText: 'Isi Tugas (pisahkan dengan baris)'),
+            maxLines: null,
           ),
         ],
       ),
@@ -294,10 +335,13 @@ class Todo {
   String title;
   List<String> activities;
   bool isCompleted;
+  DateTime?
+    deadline; 
 
   Todo({
     required this.title,
     required this.activities,
     this.isCompleted = false,
+    this.deadline, 
   });
 }
